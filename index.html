@@ -3,141 +3,226 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Stretch Streak Tracker</title>
+<title>Stretch Streak – Team-Flamme</title>
 <style>
-body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; max-width: 680px; margin: auto; padding: 20px; background: #0b1020; color: #e6eef8; }
-h1 { margin-top: 0; }
-input, select { width: 100%; padding: 12px 14px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #223157; background: #0f152d; color: #e6eef8; }
-button { padding: 10px 14px; border: 0; border-radius: 12px; cursor: pointer; margin-right: 8px; font-weight: 700; }
-.primary { background: #10b981; color: #052b1f; }
-.ghost { background: transparent; border: 1px solid #223157; color: #e6eef8; }
-.tag { display: inline-block; background: #101933; border: 1px solid #223157; padding: 6px 10px; border-radius: 999px; font-size: 12px; margin-left: 6px; color: #9aa3b2; }
-.day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
-.day { padding: 8px 0; text-align: center; border-radius: 8px; background: #0f162f; border: 1px solid #203056; color: #9aa3b2; font-size: 12px; }
-.day.ok { background: #0f3a2a; color: #c9ffe6; border-color: #18543c; }
-.small { font-size: 12px; color: #9aa3b2; }
-details { margin-top: 6px; }
+:root{--bg:#0b1020;--card:#111731;--accent:#10b981;--muted:#9aa3b2;--text:#e6eef8;--danger:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:#0b1020;color:var(--text);padding:18px;display:flex;justify-content:center}
+.app{width:100%;max-width:720px;background:linear-gradient(180deg,#131a34,#0f152d);border:1px solid #1e2748;border-radius:22px;padding:18px}
+h1{margin:2px 0 10px;font-size:24px}
+label{font-size:12px;color:var(--muted)}
+input,select{width:100%;background:#0c1228;color:var(--text);border:1px solid #223157;border-radius:12px;padding:12px 14px;margin:6px 0 10px}
+button{cursor:pointer;border:0;border-radius:12px;padding:10px 14px;font-weight:700}
+.primary{background:var(--accent);color:#052b1f}
+.ghost{background:transparent;border:1px solid #223157;color:var(--text)}
+.danger{background:var(--danger);color:#330a0a}
+.section{background:#111731;border:1px solid #202a4a;border-radius:16px;padding:14px;margin-top:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kpi{display:flex;gap:14px}
+.kpi .box{background:#0e1836;border:1px solid #223157;border-radius:12px;padding:10px 12px;min-width:130px}
+.kpi .num{font-size:24px;font-weight:800}
+.tag{display:inline-block;background:#0e1a38;border:1px solid #223157;color:var(--muted);padding:6px 10px;border-radius:999px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+.day{height:38px;border-radius:8px;border:1px solid #203056;background:#0b1633;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);position:relative}
+.day.ok{background:#103a2a;color:#c8ffe1;border-color:#18543c}
+.day.flame{background:#2a132a;color:#ffd2ff;border-color:#6b214b}
+.day .icon{position:absolute;top:4px;right:6px;font-size:14px}
+.small{font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
-<h1>Stretch Streak Tracker</h1>
+<div class="app">
+  <h1>Stretch Streak – Team-Flamme</h1>
 
-<label>Dein Name</label>
-<select id="player">
-  <option>Anu</option>
-  <option>Dominik</option>
-</select>
+  <div class="section">
+    <div class="row">
+      <div style="flex:1;min-width:220px">
+        <label>Dein Name</label>
+        <select id="player"><option>Anu</option><option>Dominik</option></select>
+      </div>
+      <div style="flex:2;min-width:240px">
+        <label>Raum-Code (gemeinsam verwenden)</label>
+        <input id="room" placeholder="anu-dominik-stretch">
+      </div>
+    </div>
 
-<label>Raum-Code (gemeinsam verwenden)</label>
-<input id="room" placeholder="anu-dominik-stretch">
+    <details>
+      <summary class="small">GitHub Repo & Token einstellen</summary>
+      <div class="row">
+        <div style="flex:1;min-width:160px"><label>Owner</label><input id="ghOwner" value="Anras001"></div>
+        <div style="flex:1;min-width:160px"><label>Repo</label><input id="ghRepo" value="Stretch-streak"></div>
+        <div style="flex:1;min-width:120px"><label>Branch</label><input id="ghBranch" value="main"></div>
+        <div style="flex:1;min-width:160px"><label>Datei</label><input id="ghPath" value="data.json"></div>
+      </div>
+      <label>Token (nur lokal gespeichert)</label>
+      <input id="ghToken" placeholder="ghp_..." type="password">
+      <div class="row">
+        <button id="saveCfg" class="ghost">Speichern</button>
+        <button id="copyLink" class="ghost">Link mit Raum kopieren</button>
+        <span id="status" class="tag">Offline</span>
+      </div>
+      <p class="small">Hinweis: Die App liest & schreibt in <code>Stretch-streak/data.json</code>. Token bleibt nur im Browser (localStorage).</p>
+    </details>
+  </div>
 
-<details>
-  <summary>GitHub Repo & Token einstellen</summary>
-  <label>Owner</label>
-  <input id="ghOwner" value="Anras001">
-  <label>Repo</label>
-  <input id="ghRepo" value="Stretch-streak">
-  <label>Branch</label>
-  <input id="ghBranch" value="main">
-  <label>Datei</label>
-  <input id="ghPath" value="data.json">
-  <label>Token (nur lokal gespeichert)</label>
-  <input id="ghToken" placeholder="ghp_..." type="password">
-  <button id="saveCfg" class="ghost">Speichern</button>
-  <p class="small">Hinweis: Der Token wird nur lokal im Browser gespeichert (localStorage). Teile ihn nur privat.</p>
-</details>
+  <div class="section">
+    <div class="row">
+      <button id="btnDone" class="primary">Ich hab's geschafft ✅</button>
+      <button id="btnUndo" class="ghost">Zurücknehmen</button>
+      <span id="today"></span>
+    </div>
+    <div class="kpi" style="margin-top:8px">
+      <div class="box"><div class="small">Team-Flammen-Streak</div><div id="teamCur" class="num">0</div></div>
+      <div class="box"><div class="small">Beste Team-Flamme</div><div id="teamBest" class="num">0</div></div>
+    </div>
+  </div>
 
-<div style="margin:10px 0;">
-  <button id="btnDone" class="primary">Ich hab's geschafft ✅</button>
-  <button id="btnUndo" class="ghost">Zurücknehmen</button>
-  <span id="status" class="tag">Offline</span>
+  <div class="section">
+    <div class="row" style="justify-content:space-between"><strong>Kalender (6 Wochen)</strong><span class="small">Grün = du erledigt · 🔥 = beide erledigt</span></div>
+    <div id="cal" class="grid"></div>
+  </div>
 </div>
-
-<div id="calendar" class="day-grid"></div>
 
 <script>
 const $ = id => document.getElementById(id);
-const TZ = 'Europe/Berlin';
+const TZ='Europe/Berlin';
+$('today').textContent = new Date().toLocaleDateString('de-DE',{timeZone:TZ, weekday:'long', day:'2-digit', month:'2-digit'});
+
 const state = {
-  player: localStorage.getItem('player') || 'Anu',
+  player: localStorage.getItem('player')||'Anu',
   room: new URLSearchParams(location.search).get('room') || localStorage.getItem('room') || 'anu-dominik-stretch',
-  today: new Date().toLocaleDateString('en-CA', { timeZone: TZ }),
-  owner: localStorage.getItem('ghOwner') || 'Anras001',
-  repo: localStorage.getItem('ghRepo') || 'Stretch-streak',
-  branch: localStorage.getItem('ghBranch') || 'main',
-  path: localStorage.getItem('ghPath') || 'data.json',
-  token: localStorage.getItem('ghToken') || '',
-  cache: {}, sha: null
+  owner: localStorage.getItem('ghOwner')||'Anras001',
+  repo: localStorage.getItem('ghRepo')||'Stretch-streak',
+  branch: localStorage.getItem('ghBranch')||'main',
+  path: localStorage.getItem('ghPath')||'data.json',
+  token: localStorage.getItem('ghToken')||'',
+  today: new Date().toLocaleDateString('en-CA',{timeZone:TZ}),
+  cache: {}, sha: null,
 };
-$('player').value = state.player; $('room').value = state.room;
-$('ghOwner').value = state.owner; $('ghRepo').value = state.repo; $('ghBranch').value = state.branch; $('ghPath').value = state.path; $('ghToken').value = state.token;
+$('player').value=state.player; $('room').value=state.room;
+$('ghOwner').value=state.owner; $('ghRepo').value=state.repo; $('ghBranch').value=state.branch; $('ghPath').value=state.path; $('ghToken').value=state.token;
 
 function daysBack(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toLocaleDateString('en-CA',{timeZone:TZ}); }
-function encodeBase64(s){return btoa(unescape(encodeURIComponent(s)));}
-function decodeBase64(s){return decodeURIComponent(escape(atob(s)));}
+function b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
+function b64d(s){ return decodeURIComponent(escape(atob(s))); }
 async function ghHeaders(){ const h={'Accept':'application/vnd.github+json'}; if(state.token) h['Authorization']='Bearer '+state.token; return h; }
 function ensureRoom(){ if(!state.cache[state.room]) state.cache[state.room] = {}; }
+function meKey(){ return $('player').value.toLowerCase(); } // 'anu' | 'dominik'
 
 async function loadData(){
-  const url = `https://api.github.com/repos/${state.owner}/${state.repo}/contents/${state.path}?ref=${encodeURIComponent(state.branch)}`;
-  const res = await fetch(url, {headers: await ghHeaders()});
-  if(res.status===404){ state.cache={}; state.sha=null; render(); return; }
-  const json=await res.json();
-  state.sha=json.sha;
-  try{ state.cache = JSON.parse(decodeBase64(json.content)||"{}"); } catch(e){ state.cache={}; }
-  render();
-  $('status').textContent = 'Bereit';
+  try{
+    const url = `https://api.github.com/repos/${state.owner}/${state.repo}/contents/${state.path}?ref=${encodeURIComponent(state.branch)}`;
+    const res = await fetch(url,{headers:await ghHeaders()});
+    if(res.status===404){ state.cache={}; state.sha=null; renderAll(); $('status').textContent='Neu'; return; }
+    const json = await res.json();
+    state.sha = json.sha;
+    state.cache = JSON.parse(b64d(json.content) || "{}");
+    renderAll();
+    $('status').textContent='Bereit';
+  }catch(e){ $('status').textContent='Fehler beim Laden'; }
 }
 
 async function saveData(){
   const url = `https://api.github.com/repos/${state.owner}/${state.repo}/contents/${state.path}`;
-  const body = { message: 'update streak', content: encodeBase64(JSON.stringify(state.cache,null,2)), branch: state.branch };
-  if(state.sha) body.sha=state.sha;
-  const res = await fetch(url,{method:'PUT', headers:{...(await ghHeaders()),'Content-Type':'application/json'}, body: JSON.stringify(body)});
-  if(!res.ok){ const t=await res.text(); alert('Fehler beim Speichern: '+t); }
+  const body = { message:'update team flame', content:b64e(JSON.stringify(state.cache,null,2)), branch:state.branch };
+  if(state.sha) body.sha = state.sha;
+  const res = await fetch(url,{ method:'PUT', headers:{...(await ghHeaders()),'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if(res.status===409){
+    // Conflict: reload latest then retry once
+    await loadData();
+    const res2 = await fetch(url,{ method:'PUT', headers:{...(await ghHeaders()),'Content-Type':'application/json'}, body: JSON.stringify({ ...body, sha: state.sha })});
+    if(!res2.ok){ const t=await res2.text(); alert('Fehler beim Speichern (nach Reload): '+t); return false; }
+    const j2 = await res2.json(); state.sha=j2.content.sha; return true;
+  }
+  if(!res.ok){ const t=await res.text(); alert('Fehler beim Speichern: '+t); return false; }
+  const json = await res.json(); state.sha = json.content.sha; return true;
 }
 
-function render(){
+function updateButtons(){
   ensureRoom();
-  const cal=$('calendar'); cal.innerHTML='';
+  const rec = state.cache[state.room][state.today] || {};
+  const done = !!rec[meKey()];
+  $('btnDone').disabled = done;
+  $('btnUndo').disabled = !done;
+}
+
+function renderCalendar(){
+  ensureRoom();
+  const map = state.cache[state.room] || {};
+  const cal = $('cal'); cal.innerHTML='';
   for(let i=41;i>=0;i--){
-    const id=daysBack(i);
-    const cell=document.createElement('div'); cell.className='day';
-    cell.textContent = new Date(id).getDate();
-    const me=state.player.toLowerCase();
-    if(state.cache[state.room]?.[id]?.[me]) cell.classList.add('ok');
+    const id = daysBack(i);
+    const cell = document.createElement('div'); cell.className='day'; cell.title=id;
+    cell.textContent = new Date(id+'T00:00:00').toLocaleDateString('de-DE',{timeZone:TZ,day:'2-digit'});
+    const me = meKey();
+    const d = map[id] || {};
+    if(d[me]) cell.classList.add('ok');
+    if(d.anu && d.dominik){
+      cell.classList.add('flame');
+      const icon = document.createElement('span'); icon.className='icon'; icon.textContent='🔥';
+      cell.appendChild(icon);
+    }
     cal.appendChild(cell);
   }
 }
 
-async function tick(val){
-  if(!state.token){ alert('Bitte Token eintragen'); return; }
+function calcTeamStreak(){
   ensureRoom();
-  const me=state.player.toLowerCase();
-  const rec=state.cache[state.room][state.today]||{anu:false,dominik:false};
-  rec[me]=val;
-  state.cache[state.room][state.today]=rec;
-  render();
-  await saveData();
+  const map = state.cache[state.room] || {};
+  let cur=0,best=0;
+  for(let i=0;i<365;i++){
+    const id=daysBack(i); const d=map[id]||{};
+    if(d.anu && d.dominik){ cur++; best = Math.max(best,cur); }
+    else { if(i===0) cur=0; else break; }
+  }
+  $('teamCur').textContent = String(cur);
+  $('teamBest').textContent = String(best);
 }
 
-$('saveCfg').onclick=()=>{
-  state.player=$('player').value; state.room=$('room').value.trim()||'anu-dominik-stretch';
-  state.owner=$('ghOwner').value; state.repo=$('ghRepo').value;
-  state.branch=$('ghBranch').value; state.path=$('ghPath').value;
-  state.token=$('ghToken').value;
-  localStorage.setItem('player', state.player);
-  localStorage.setItem('room', state.room);
-  localStorage.setItem('ghOwner', state.owner);
-  localStorage.setItem('ghRepo', state.repo);
-  localStorage.setItem('ghBranch', state.branch);
-  localStorage.setItem('ghPath', state.path);
-  localStorage.setItem('ghToken', state.token);
+function renderAll(){ renderCalendar(); updateButtons(); calcTeamStreak(); }
+
+async function tick(val){
+  if(!state.token){ alert('Bitte Token eintragen und speichern.'); return; }
+  ensureRoom();
+  const me=meKey();
+  const rec = state.cache[state.room][state.today] || { anu:false, dominik:false };
+  rec[me] = val;
+  state.cache[state.room][state.today] = rec;
+  renderAll();
+  const ok = await saveData();
+  $('status').textContent = ok ? 'Gespeichert' : 'Fehler';
+}
+
+$('saveCfg').onclick = ()=>{
+  state.player = $('player').value;
+  state.room = $('room').value.trim() || 'anu-dominik-stretch';
+  state.owner = $('ghOwner').value.trim();
+  state.repo = $('ghRepo').value.trim();
+  state.branch = $('ghBranch').value.trim();
+  state.path = $('ghPath').value.trim() || 'data.json';
+  state.token = $('ghToken').value.trim();
+  localStorage.setItem('player',state.player);
+  localStorage.setItem('room',state.room);
+  localStorage.setItem('ghOwner',state.owner);
+  localStorage.setItem('ghRepo',state.repo);
+  localStorage.setItem('ghBranch',state.branch);
+  localStorage.setItem('ghPath',state.path);
+  localStorage.setItem('ghToken',state.token);
   loadData();
 };
-$('btnDone').onclick=()=>tick(true);
-$('btnUndo').onclick=()=>tick(false);
+
+$('copyLink').onclick = async ()=>{
+  const u = new URL(location.href); u.searchParams.set('room',$('room').value.trim());
+  try{ await navigator.clipboard.writeText(u.toString()); $('status').textContent='Link kopiert'; }catch(e){ alert(u.toString()); }
+};
+
+$('btnDone').onclick = ()=> tick(true);
+$('btnUndo').onclick = ()=> tick(false);
+
+// Auto-load
 loadData();
+// Poll every 12s so ihr seht euch gegenseitig
+setInterval(()=>{ if(state.token) loadData(); }, 12000);
 </script>
 </body>
 </html>
