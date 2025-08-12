@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stretch Streak – Schnell & Stabil</title>
+<style>
+  :root{--bg:#0b1020;--card:#111731;--accent:#10b981;--muted:#9aa3b2;--text:#e6eef8;--danger:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:720px;margin:0 auto;padding:18px}
+  .card{background:linear-gradient(180deg,#131a34,#0f152d);border:1px solid #1e2748;border-radius:18px;padding:14px;margin-top:12px}
+  h1{margin:0 0 6px}
+  input{width:100%;padding:12px 14px;margin-bottom:8px;border-radius:10px;border:1px solid #223157;background:#0f152d;color:var(--text)}
+  button{cursor:pointer;border:0;border-radius:12px;padding:12px 16px;font-weight:700;transition:opacity .15s}
+  .primary{background:var(--accent);color:#052b1f}
+  .danger{background:var(--danger);color:#2b0a0a}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .wide{display:flex;gap:10px}
+  .wide>button{flex:1}
+  .tag{display:inline-block;background:#101933;border:1px solid #223157;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+  .center{text-align:center}
+  .flame{font-size:56px;opacity:.25}
+  .flame.on{opacity:1}
+  .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .day{height:42px;border-radius:8px;border:1px solid #203056;background:#0b1633;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:#9aa3b2}
+  .day.both{background:#0f3a2a;color:#c9ffe6;border-color:#18543c}
+  .mark{font-size:10px;line-height:1.1;margin-top:2px;color:#9aa3b2}
+  .small{font-size:12px;color:#9aa3b2}
+  .dim{opacity:.6}
+  details{margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Stretch Streak</h1>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <div class="small">Raum-Code: <strong>anu-dominik-stretch</strong> (fest)</div>
+      <span id="status" class="tag">Bereit</span>
+    </div>
+    <details>
+      <summary>Einstellungen (GitHub Repo & Token)</summary>
+      <label class="small">Owner</label>
+      <input id="ghOwner" value="Anras001">
+      <label class="small">Repo</label>
+      <input id="ghRepo" value="Stretch-streak">
+      <label class="small">Branch</label>
+      <input id="ghBranch" value="main">
+      <label class="small">Datei</label>
+      <input id="ghPath" value="data.json">
+      <label class="small">Token (nur lokal gespeichert)</label>
+      <input id="ghToken" placeholder="ghp_..." type="password">
+      <button id="saveCfg">Speichern</button>
+      <p class="small">Token bleibt nur lokal (localStorage). Teile ihn nur privat.</p>
+    </details>
+  </div>
+
+  <div class="card center">
+    <div class="wide">
+      <button id="btnAnu" class="primary">Anu ✅</button>
+      <button id="btnDominik" class="primary">Dominik ✅</button>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:10px">
+      <button id="btnReset" class="danger">Reset heute</button>
+    </div>
+    <div style="margin-top:10px">
+      <div id="flame" class="flame">🔥</div>
+      <div id="todayText" class="small"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <strong>Kalender (6 Wochen)</strong>
+      <span class="small">Grün = beide erledigt</span>
+    </div>
+    <div class="calendar" id="cal"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const TZ = 'Europe/Berlin';
+const ROOM = 'anu-dominik-stretch'; // fest
+
+// --- State ---
+const state = {
+  owner: localStorage.getItem('ghOwner') || 'Anras001',
+  repo: localStorage.getItem('ghRepo') || 'Stretch-streak',
+  branch: localStorage.getItem('ghBranch') || 'main',
+  path: localStorage.getItem('ghPath') || 'data.json',
+  token: localStorage.getItem('ghToken') || '',
+  cache: {}, sha: null,
+
+  // batching / queue
+  pendingLocal: {}, // lokale Änderungen, die noch nicht hochgeladen sind
+  saveScheduled: false,
+  saving: false,
+};
+
+$('ghOwner').value = state.owner; $('ghRepo').value = state.repo; $('ghBranch').value = state.branch; $('ghPath').value = state.path; $('ghToken').value = state.token;
+
+function today(){ return new Date().toLocaleDateString('en-CA', { timeZone: TZ }); }
+function daysBack(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toLocaleDateString('en-CA',{timeZone:TZ}); }
+function encodeBase64(s){return btoa(unescape(encodeURIComponent(s)));}
+function decodeBase64(s){return decodeURIComponent(escape(atob(s)));}
+
+async function ghHeaders(){
+  const h={'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
+  if(state.token) h['Authorization']='Bearer '+state.token;
+  return h;
+}
+
+// GitHub I/O
+async function loadLatest(){
+  const url = `https://api.github.com/repos/${state.owner}/${state.repo}/contents/${state.path}?ref=${encodeURIComponent(state.branch)}`;
+  const res = await fetch(url, { headers: await ghHeaders() });
+  if(res.status===404) return { cache:{}, sha:null };
+  const json = await res.json();
+  const cache = JSON.parse(decodeBase64(json.content) || "{}");
+  return { cache, sha: json.sha };
+}
+
+async function putData(cache, sha){
+  const url = `https://api.github.com/repos/${state.owner}/${state.repo}/contents/${state.path}`;
+  const body = { message: 'update streak', content: encodeBase64(JSON.stringify(cache,null,2)), branch: state.branch };
+  if(sha) body.sha = sha;
+  return fetch(url, { method:'PUT', headers:{...(await ghHeaders()),'Content-Type':'application/json'}, body: JSON.stringify(body) });
+}
+
+// Render
+function render(){
+  // ensure structures
+  if(!state.cache[ROOM]) state.cache[ROOM] = {};
+
+  // Kalender
+  const cal = $('cal'); cal.innerHTML='';
+  for(let i=41;i>=0;i--){
+    const id = daysBack(i);
+    const rec = state.cache[ROOM][id] || { anu:false, dominik:false };
+    const el = document.createElement('div');
+    el.className = 'day' + (rec.anu && rec.dominik ? ' both' : '');
+    el.innerHTML = `<div>${new Date(id).getDate()}</div><div class="mark">${(rec.anu? 'A':'·')} ${(rec.dominik? 'D':'·')}</div>`;
+    cal.appendChild(el);
+  }
+
+  // Heute / Flamme + Buttons
+  const t = today();
+  const rec = state.cache[ROOM][t] || { anu:false, dominik:false };
+  const both = rec.anu && rec.dominik;
+  $('flame').className = both ? 'flame on' : 'flame';
+  $('todayText').textContent = both ? '🔥 Beide geschafft heute!' : 'Noch nicht beide geklickt';
+
+  $('btnAnu').disabled = !!rec.anu; $('btnAnu').textContent = rec.anu ? 'Anu: Heute erledigt 🎉' : 'Anu ✅';
+  $('btnDominik').disabled = !!rec.dominik; $('btnDominik').textContent = rec.dominik ? 'Dominik: Heute erledigt 🎉' : 'Dominik ✅';
+}
+
+// Lokale Änderung sofort anwenden + Save planen
+function setLocal(action){
+  if(!state.token){ alert('Bitte Token eintragen und Speichern drücken.'); return; }
+  if(!state.cache[ROOM]) state.cache[ROOM] = {};
+  const day = today();
+  const rec = state.cache[ROOM][day] || { anu:false, dominik:false };
+
+  if(action==='anu-true') rec.anu = true;
+  if(action==='dominik-true') rec.dominik = true;
+  if(action==='reset') { rec.anu=false; rec.dominik=false; }
+  state.cache[ROOM][day] = rec;
+
+  // sofortige Optik
+  render();
+
+  // pending vermerken (nur Tag-Ebene, reicht aus)
+  state.pendingLocal[day] = { ...rec };
+  scheduleSave();
+}
+
+// Debounce/Batch-Speichern
+function scheduleSave(){
+  if(state.saveScheduled) return;
+  state.saveScheduled = true;
+  $('status').textContent = 'Speichert…';
+  setTimeout(runSaveQueue, 600); // bündelt schnelle Klicks
+}
+
+async function runSaveQueue(){
+  state.saveScheduled = false;
+  if(state.saving) { state.saveScheduled = true; setTimeout(runSaveQueue, 400); return; }
+  state.saving = true;
+  try {
+    // bis nichts mehr pending ist
+    for(let cycles=0; cycles<5; cycles++){
+      const pendingKeys = Object.keys(state.pendingLocal);
+      if(pendingKeys.length===0) break;
+
+      // 1) Neueste Version laden
+      const latest = await loadLatest();
+      const cache = latest.cache;
+      if(!cache[ROOM]) cache[ROOM] = {};
+
+      // 2) Pending-Änderungen mergen
+      pendingKeys.forEach(k => {
+        cache[ROOM][k] = { ...cache[ROOM][k], ...state.pendingLocal[k] };
+      });
+
+      // 3) Speichern mit Retries
+      let ok=false, lastRes=null;
+      for(let attempt=0; attempt<5; attempt++){
+        const res = await putData(cache, latest.sha);
+        lastRes = res;
+        if(res.ok){ ok=true; break; }
+        if(res.status===409){ // sha conflict -> re-laden und nochmal mergen
+          const latest2 = await loadLatest();
+          if(!latest2.cache[ROOM]) latest2.cache[ROOM]={};
+          pendingKeys.forEach(k => {
+            latest2.cache[ROOM][k] = { ...latest2.cache[ROOM][k], ...state.pendingLocal[k] };
+          });
+          Object.assign(cache, latest2.cache);
+          latest.sha = latest2.sha;
+          await new Promise(r=>setTimeout(r, 250+attempt*200));
+          continue;
+        }
+        // andere Fehler -> abbrechen
+        const t = await res.text();
+        throw new Error('Fehler beim Speichern: '+t);
+      }
+      if(!ok){
+        const t = lastRes ? await lastRes.text() : 'Unbekannt';
+        throw new Error('Speichern fehlgeschlagen: '+t);
+      }
+
+      // 4) Erfolgreich -> lokale pending löschen & sichtbaren Cache aktualisieren
+      pendingKeys.forEach(k => delete state.pendingLocal[k]);
+      state.cache = cache;
+      render();
+    }
+    $('status').textContent = 'Gespeichert';
+  } catch(e){
+    console.error(e);
+    $('status').textContent = 'Fehler';
+    alert(e.message || e);
+  } finally {
+    state.saving = false;
+  }
+}
+
+// Events
+$('btnAnu').onclick = ()=> setLocal('anu-true');
+$('btnDominik').onclick = ()=> setLocal('dominik-true');
+$('btnReset').onclick = ()=> setLocal('reset');
+
+$('saveCfg').onclick = ()=>{
+  state.owner=$('ghOwner').value; state.repo=$('ghRepo').value;
+  state.branch=$('ghBranch').value; state.path=$('ghPath').value;
+  state.token=$('ghToken').value;
+  localStorage.setItem('ghOwner', state.owner);
+  localStorage.setItem('ghRepo', state.repo);
+  localStorage.setItem('ghBranch', state.branch);
+  localStorage.setItem('ghPath', state.path);
+  localStorage.setItem('ghToken', state.token);
+  $('status').textContent = 'Gespeichert';
+};
+
+// Initial: neueste Daten laden und anzeigen
+(async ()=>{
+  try {
+    const { cache, sha } = await loadLatest();
+    state.cache = cache; state.sha = sha;
+  } catch(e){ console.warn('Konnte nicht laden (offline?)', e); }
+  render();
+})();
+</script>
+</body>
+</html>
